@@ -20,18 +20,11 @@ SCSFExport scsf_ReadValuesFromPerzistVarsAndLogIntoMySQL(SCStudyInterfaceRef sc)
         sc.Input[4].Name = "Chart for DOM Bid-Ask";
         sc.Input[4].SetChartStudyValues(5, 0);
         sc.GraphRegion = 0;//same as main
-        sc.GraphName = "Read the perzists and log into mysql";
+        sc.GraphName = "TEST Read the perzists and log into mysql";
         sc.GlobalDisplayStudyNameSubgraphNamesAndValues = 0;
         sc.FreeDLL = 1;
         sc.UpdateAlways = 1;
         return;
-    }
-
-    int &already_logged_into_db = sc.GetPersistentInt(100);
-    if(!already_logged_into_db)
-    {
-        already_logged_into_db = 1;
-        connect_to_db(sc);
     }
 
     //get the perzist data
@@ -58,80 +51,85 @@ SCSFExport scsf_ReadValuesFromPerzistVarsAndLogIntoMySQL(SCStudyInterfaceRef sc)
     auto last_entry_dt = PositionData.LastEntryDateTime;
     int Year, Month, Day, Hour, Minute, Second;
     last_entry_dt.GetDateTimeYMDHMS(Year, Month, Day, Hour, Minute, Second);
-    log.Format("Entry DateTime: %i-%i-%i, %0.2i:%0.2i:%0.2i,  Entry price: %3.2f, Symbol: %s, Quantity: %3.0f, ATR: %3.2f, WTR: %i, DOM: %i", Year, Month, Day, Hour, Minute, Second, PositionData.AveragePrice, symbol, qty, atr_value, wtr_value, dom);
+    log.Format("Entry DateTime: %i-%i-%i, %0.2i:%0.2i:%0.2i,  Entry price: %3.2f, Symbol: %s, Quantity: %3.0f, ATR: %3.2f, WTR: %i, DOM: %i", 
+        Year, Month, Day, Hour, Minute, Second, PositionData.AveragePrice, symbol, qty, atr_value, wtr_value, dom);
+
+
+    SCString _log;
+    _log.Format("%3.2f, %s", PositionData.AveragePrice, symbol); //cena a symbol
+    const char * _query_values = static_cast<const char *>(_log);
 
     if (previous_qt_perzist == 0 && PositionData.PositionQuantity != 0)
     {
-        if (already_logged_perzist == 0)
-        {
-            if (symbol.at(0) == 'N' || symbol.at(5) == 'N') //log details for NQ entries into separate txt file
-            {
-                std::string name_of_db = "NQ_TRADES";
+        write_entry_details_into_db(sc);
+        previous_qt_perzist = 1;
 
-
-
-
-
-
-
-
-
-
-
-                std::string file_name{ "Entry logs NQ.txt" }; //custom foo crating string
-                std::ofstream out_file{};
-                out_file.open(file_name, std::ofstream::app);
-                if (out_file.is_open())
-                {
-                    std::string test_logu{ log };
-                    out_file << test_logu << '\n';
-                }
-                else
-                {
-                    SCString log_error{ "Error writing into file" };
-                    sc.AddMessageToLog(log_error, 1);
-                }
-                out_file.close();
-            }
-            else if (symbol.at(0) == 'Y' || symbol.at(5) == 'Y') //log details for YM entries into separate txt file
-            {
-                std::string file_name{ "Entry logs YM.txt" };
-                std::ofstream out_file{};
-                out_file.open(file_name, std::ofstream::app);
-                if (out_file.is_open())
-                {
-                    std::string test_logu{ log };
-                    out_file << test_logu << '\n';
-                }
-                else
-                {
-                    SCString log_error{ "Error writing into file" };
-                    sc.AddMessageToLog(log_error, 1);
-                }
-                out_file.close();
-            }
-            else if (symbol.at(0) == 'R' || symbol.at(5) == 'R') //log details for RTY entries into separate txt file
-            {
-                std::string file_name{ "Entry logs RTY.txt" };
-                std::ofstream out_file{};
-                out_file.open(file_name, std::ofstream::app);
-                if (out_file.is_open())
-                {
-                    std::string test_logu{ log };
-                    out_file << test_logu << '\n';
-                }
-                else
-                {
-                    SCString log_error{ "Error writing into file" };
-                    sc.AddMessageToLog(log_error, 1);
-                }
-                out_file.close();
-            }
-            //internal sierra logs
-            sc.AddMessageToLog(log, 0);
-            already_logged_perzist = 1;
-        }
     }
+
+
+    //if (previous_qt_perzist == 0 && PositionData.PositionQuantity != 0)
+    //{
+    //    if (already_logged_perzist == 0)
+    //    {
+    //        if (symbol.at(0) == 'N' || symbol.at(5) == 'N') //log details for NQ entries into separate txt file
+    //        {
+    //            std::string name_of_db = "NQ_TRADES";
+
+    //            std::string file_name{ "Entry logs NQ.txt" }; //custom foo crating string
+    //            std::ofstream out_file{};
+    //            out_file.open(file_name, std::ofstream::app);
+    //            if (out_file.is_open())
+    //            {
+    //                std::string test_logu{ log };
+    //                out_file << test_logu << '\n';
+    //            }
+    //            else
+    //            {
+    //                SCString log_error{ "Error writing into file" };
+    //                sc.AddMessageToLog(log_error, 1);
+    //            }
+    //            out_file.close();
+    //        }
+    //        else if (symbol.at(0) == 'Y' || symbol.at(5) == 'Y') //log details for YM entries into separate txt file
+    //        {
+    //            std::string file_name{ "Entry logs YM.txt" };
+    //            std::ofstream out_file{};
+    //            out_file.open(file_name, std::ofstream::app);
+    //            if (out_file.is_open())
+    //            {
+    //                std::string test_logu{ log };
+    //                out_file << test_logu << '\n';
+    //            }
+    //            else
+    //            {
+    //                SCString log_error{ "Error writing into file" };
+    //                sc.AddMessageToLog(log_error, 1);
+    //            }
+    //            out_file.close();
+    //        }
+    //        else if (symbol.at(0) == 'R' || symbol.at(5) == 'R') //log details for RTY entries into separate txt file
+    //        {
+    //            std::string file_name{ "Entry logs RTY.txt" };
+    //            std::ofstream out_file{};
+    //            out_file.open(file_name, std::ofstream::app);
+    //            if (out_file.is_open())
+    //            {
+    //                std::string test_logu{ log };
+    //                out_file << test_logu << '\n';
+    //            }
+    //            else
+    //            {
+    //                SCString log_error{ "Error writing into file" };
+    //                sc.AddMessageToLog(log_error, 1);
+    //            }
+    //            out_file.close();
+    //        }
+    //        //internal sierra logs
+    //        sc.AddMessageToLog(log, 0);
+    //        already_logged_perzist = 1;
+    //    }
+    //}
+
     if (PositionData.PositionQuantity == 0) { already_logged_perzist = 0; }	//reset the persist var for loging to zero again
 
     //draw the data into chart																		
