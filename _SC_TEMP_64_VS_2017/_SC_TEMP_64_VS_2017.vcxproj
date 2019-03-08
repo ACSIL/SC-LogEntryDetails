@@ -24,7 +24,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>SCTEMP64VS2017</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
-    <ProjectName>LOG ENTRY DETAILS 2017</ProjectName>
+    <ProjectName>LOG ENTRY DETAILS</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -171,6 +171,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\database.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SQLScript.sql" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

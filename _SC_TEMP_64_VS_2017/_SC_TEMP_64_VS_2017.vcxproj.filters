@@ -33,4 +33,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="SQLScript.sql">
+      <Filter>Custom Foos</Filter>
+    </None>
+  </ItemGroup>
 </Project>

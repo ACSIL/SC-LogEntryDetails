@@ -34,12 +34,7 @@ SCSFExport scsf_ReadValuesFromPerzistVarsAndLogIntoMySQL(SCStudyInterfaceRef sc)
     int dom_quotes_ab = static_cast<int>(sc.GetStudyPersistentFloatFromChart(sc.Input[3].GetChartNumber(), sc.Input[3].GetStudyID(), 0));
     int dom_quotes_ba = static_cast<int>(sc.GetStudyPersistentFloatFromChart(sc.Input[4].GetChartNumber(), sc.Input[4].GetStudyID(), 0));
 
-    int dom{};
-    if (dom_quotes_ab > abs(dom_quotes_ba)) dom = dom_quotes_ab;
-    else dom = dom_quotes_ba;
-
     //set the internal sierra logs message details
-
     int &previous_qt_perzist = sc.GetPersistentInt(0);
     int &already_logged_perzist = sc.GetPersistentInt(1);
     SCString log;
@@ -48,89 +43,92 @@ SCSFExport scsf_ReadValuesFromPerzistVarsAndLogIntoMySQL(SCStudyInterfaceRef sc)
     std::string symbol{ PositionData.Symbol };
     t_OrderQuantity32_64 qty{ PositionData.PositionQuantity };
 
-    auto last_entry_dt = PositionData.LastEntryDateTime;
-    int Year, Month, Day, Hour, Minute, Second;
-    last_entry_dt.GetDateTimeYMDHMS(Year, Month, Day, Hour, Minute, Second);
-    log.Format("Entry DateTime: %i-%i-%i, %0.2i:%0.2i:%0.2i,  Entry price: %3.2f, Symbol: %s, Quantity: %3.0f, ATR: %3.2f, WTR: %i, DOM: %i", 
-        Year, Month, Day, Hour, Minute, Second, PositionData.AveragePrice, symbol, qty, atr_value, wtr_value, dom);
-
-
-    SCString _log;
-    _log.Format("%3.2f, %s", PositionData.AveragePrice, symbol); //cena a symbol
-    const char * _query_values = static_cast<const char *>(_log);
-
-    if (previous_qt_perzist == 0 && PositionData.PositionQuantity != 0)
+    //writing into database
+    if (previous_qt_perzist == 0 && PositionData.PositionQuantity != 0) // after opening the possition write entry details into mysql
     {
         write_entry_details_into_db(sc);
         previous_qt_perzist = 1;
-
     }
+    if (previous_qt_perzist == 1 && PositionData.PositionQuantity == 0) // after closing the possition write results into mysql
+    { 
+        update_results(sc);
+        previous_qt_perzist = 0;
+    }	
 
+    double PriceHighDuringPosition = 0;
+    PriceHighDuringPosition = PositionData.PriceHighDuringPosition;
+    double PriceLowDuringPosition = 0;
+    PriceLowDuringPosition = PositionData.PriceLowDuringPosition;
 
-    //if (previous_qt_perzist == 0 && PositionData.PositionQuantity != 0)
-    //{
-    //    if (already_logged_perzist == 0)
-    //    {
-    //        if (symbol.at(0) == 'N' || symbol.at(5) == 'N') //log details for NQ entries into separate txt file
-    //        {
-    //            std::string name_of_db = "NQ_TRADES";
+    double MaximumOpenPositionProfit = 0;
+    MaximumOpenPositionProfit = PositionData.MaximumOpenPositionProfit;
+    double MaximumOpenPositionLoss = 0;
+    MaximumOpenPositionLoss = PositionData.MaximumOpenPositionLoss;
 
-    //            std::string file_name{ "Entry logs NQ.txt" }; //custom foo crating string
-    //            std::ofstream out_file{};
-    //            out_file.open(file_name, std::ofstream::app);
-    //            if (out_file.is_open())
-    //            {
-    //                std::string test_logu{ log };
-    //                out_file << test_logu << '\n';
-    //            }
-    //            else
-    //            {
-    //                SCString log_error{ "Error writing into file" };
-    //                sc.AddMessageToLog(log_error, 1);
-    //            }
-    //            out_file.close();
-    //        }
-    //        else if (symbol.at(0) == 'Y' || symbol.at(5) == 'Y') //log details for YM entries into separate txt file
-    //        {
-    //            std::string file_name{ "Entry logs YM.txt" };
-    //            std::ofstream out_file{};
-    //            out_file.open(file_name, std::ofstream::app);
-    //            if (out_file.is_open())
-    //            {
-    //                std::string test_logu{ log };
-    //                out_file << test_logu << '\n';
-    //            }
-    //            else
-    //            {
-    //                SCString log_error{ "Error writing into file" };
-    //                sc.AddMessageToLog(log_error, 1);
-    //            }
-    //            out_file.close();
-    //        }
-    //        else if (symbol.at(0) == 'R' || symbol.at(5) == 'R') //log details for RTY entries into separate txt file
-    //        {
-    //            std::string file_name{ "Entry logs RTY.txt" };
-    //            std::ofstream out_file{};
-    //            out_file.open(file_name, std::ofstream::app);
-    //            if (out_file.is_open())
-    //            {
-    //                std::string test_logu{ log };
-    //                out_file << test_logu << '\n';
-    //            }
-    //            else
-    //            {
-    //                SCString log_error{ "Error writing into file" };
-    //                sc.AddMessageToLog(log_error, 1);
-    //            }
-    //            out_file.close();
-    //        }
-    //        //internal sierra logs
-    //        sc.AddMessageToLog(log, 0);
-    //        already_logged_perzist = 1;
-    //    }
-    //}
+    s_UseTool tick;
+    tick.Clear();
+    tick.ChartNumber = sc.ChartNumber;
+    tick.DrawingType = DRAWING_TEXT;
+    tick.FontSize = 10;
+    tick.FontBold = false;
+    tick.AddMethod = UTAM_ADD_OR_ADJUST;
+    tick.UseRelativeVerticalValues = 1;
+    tick.BeginDateTime = 7;
+    tick.BeginValue = 80;
+    tick.Color = RGB(255, 255, 255);
+    tick.Region = 0;
+    tick.Text.Format("PriceHighDuringPosition: %f", PriceHighDuringPosition);
+    tick.LineNumber = 11;
+    sc.UseTool(tick);
 
-    if (PositionData.PositionQuantity == 0) { already_logged_perzist = 0; }	//reset the persist var for loging to zero again
+    s_UseTool atr;
+    atr.Clear();
+    atr.ChartNumber = sc.ChartNumber;
+    atr.DrawingType = DRAWING_TEXT;
+    atr.FontSize = 10;
+    atr.FontBold = false;
+    atr.AddMethod = UTAM_ADD_OR_ADJUST;
+    atr.UseRelativeVerticalValues = 1;
+    atr.BeginDateTime = 7;
+    atr.BeginValue = 77;
+    atr.Color = RGB(255, 255, 255);
+    atr.Region = 0;
+    atr.Text.Format("PriceLowDuringPosition: %f", PriceLowDuringPosition);
+    atr.LineNumber = 12;
+    sc.UseTool(atr);
+
+    s_UseTool a;
+   a.Clear();
+   a.ChartNumber = sc.ChartNumber;
+   a.DrawingType = DRAWING_TEXT;
+   a.FontSize = 10;
+   a.FontBold = false;
+   a.AddMethod = UTAM_ADD_OR_ADJUST;
+   a.UseRelativeVerticalValues = 1;
+   a.BeginDateTime = 7;
+   a.BeginValue = 74;
+   a.Color = RGB(255, 255, 255);
+   a.Region = 0;
+   a.Text.Format("MaximumOpenPositionProfit: %f", MaximumOpenPositionProfit);
+   a.LineNumber = 13;
+    sc.UseTool(a);
+
+    s_UseTool b;
+    b.Clear();
+    b.ChartNumber = sc.ChartNumber;
+    b.DrawingType = DRAWING_TEXT;
+    b.FontSize = 10;
+    b.FontBold = false;
+    b.AddMethod = UTAM_ADD_OR_ADJUST;
+    b.UseRelativeVerticalValues = 1;
+    b.BeginDateTime = 7;
+    b.BeginValue = 71;
+    b.Color = RGB(255, 255, 255);
+    b.Region = 0;
+    b.Text.Format("MaximumOpenPositionLoss: %f", MaximumOpenPositionLoss);
+    b.LineNumber = 14;
+    sc.UseTool(b);
+
 
     //draw the data into chart																		
     {
